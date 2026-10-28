@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>瀏覽器端 AI 環境偵測</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1f2328; --muted: #59636e; --line: #d1d9e0;
+    --ok: #1a7f37; --warn: #9a6700; --bad: #cf222e; --card: #f6f8fa;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117; --fg: #e6edf3; --muted: #9198a1; --line: #3d444d;
+      --ok: #3fb950; --warn: #d29922; --bad: #f85149; --card: #151b23;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 16px; background: var(--bg); color: var(--fg);
+    font: 15px/1.6 -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", sans-serif;
+  }
+  main { max-width: 880px; margin: 0 auto; }
+  h1 { font-size: 1.4rem; margin: 0 0 4px; }
+  p.note { color: var(--muted); margin: 0 0 16px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 20px; }
+  button {
+    font: inherit; padding: 6px 14px; border-radius: 6px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--card); color: var(--fg);
+  }
+  button:disabled { opacity: .5; cursor: default; }
+  #status { color: var(--muted); }
+  section { margin-bottom: 20px; }
+  h2 { font-size: 1.05rem; margin: 0 0 6px; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  td { padding: 5px 6px; border-bottom: 1px solid var(--line); vertical-align: top; overflow-wrap: anywhere; }
+  td.k { width: 42%; color: var(--muted); }
+  .ok { color: var(--ok); } .warn { color: var(--warn); } .bad { color: var(--bad); }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .9em; }
+</style>
+</head>
+<body>
+<main>
+  <h1>瀏覽器端 AI 環境偵測</h1>
+  <p class="note">檢查這個瀏覽器能使用哪些瀏覽器端 AI 技術。本頁只在瀏覽器內執行檢查，不傳送任何資料，也不會下載模型。</p>
+  <div class="actions">
+    <button id="run">重新偵測</button>
+    <button id="copy" disabled>複製結果（JSON）</button>
+    <button id="download" disabled>下載結果（JSON）</button>
+    <span id="status">偵測中…</span>
+  </div>
+  <div id="out"></div>
+</main>
+<script type="module" src="./detect.js"></script>
+</body>
+</html>
