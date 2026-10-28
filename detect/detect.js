@@ -1,5 +1,5 @@
 // 瀏覽器端 AI 環境偵測。所有檢查只在本機執行，不傳送任何資料，也不觸發模型下載。
-const PAGE_VERSION = '0.1.0';
+const PAGE_VERSION = '0.2.0';
 const TIMEOUT_MS = 10000;
 
 const $ = (id) => document.getElementById(id);
@@ -36,6 +36,7 @@ async function checkEnvironment() {
     userAgent: nav.userAgent,
     isSecureContext: window.isSecureContext,
     crossOriginIsolated: window.crossOriginIsolated === true,
+    serviceWorkerControlled: !!(nav.serviceWorker && nav.serviceWorker.controller),
     hardwareConcurrency: nav.hardwareConcurrency ?? null,
     deviceMemoryGB: nav.deviceMemory ?? null, // 只有 Chromium 提供，且為粗略值
     language: nav.language,
