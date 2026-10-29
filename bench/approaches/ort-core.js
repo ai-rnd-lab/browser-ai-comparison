@@ -40,7 +40,7 @@ const isPunct = (ch) => {
 const isCjk = (c) => (c >= 0x4e00 && c <= 0x9fff) || (c >= 0x3400 && c <= 0x4dbf) || (c >= 0x20000 && c <= 0x2a6df) ||
   (c >= 0x2a700 && c <= 0x2ebef) || (c >= 0xf900 && c <= 0xfaff) || (c >= 0x2f800 && c <= 0x2fa1f);
 
-function buildTokenizer(json) {
+export function buildTokenizer(json) {
   const vocab = json.model.vocab;
   const unk = vocab[json.model.unk_token || '[UNK]'];
   const cls = vocab['[CLS]'], sep = vocab['[SEP]'];

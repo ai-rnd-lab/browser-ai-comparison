@@ -70,6 +70,16 @@ M7（記憶體峰值）與 M8（整合成本）不由本頁量測，M7 以活動
 - 快取：模型、分詞器、設定檔、WebAssembly 檔都由本檔取得並存入名為 `bench-ort-cache` 的 Cache Storage；冷啟動略過 HTTP 快取，暖啟動讀 Cache Storage。
 - 分詞器只用假模型的詞表驗證過輸出一致，真實詞表須以 SST-2 逐句比對兩個方案的輸出。
 
+## 受測方案：LiteRT.js 最小檢查（任務 A）
+
+- 目的：確認 LiteRT.js 能否在瀏覽器執行 BERT 類文字分類，並取得基本數據。模型是 Google MediaPipe 提供的 BERT 分類模型（MobileBERT 架構、SST-2 訓練、`.tflite`），與 DistilBERT 不是同一個模型，因此不做同模型的效能比較。
+- 套件：`@litertjs/core` 2.6.0，打包檔放在 `vendor/litert/`（原因與授權見該目錄 README）；WebAssembly 檔由 jsdelivr 載入。
+- 只支援主執行緒：LiteRT.js 的載入程式在 Worker 內呼叫 `importScripts`，module Worker 不支援。
+- 進階選項：`device`（`webgpu` 預設、`wasm`）、`threads`（`true` 載入多執行緒版）、`modelUrl`（覆寫 `.tflite` 來源）、`dataset`。
+- 詞表與標籤取自 `.tflite` 檔尾附帶的中繼資料壓縮檔（`vocab.txt`、`labels.txt`）；分詞沿用 ONNX Runtime 方案的 WordPiece 實作。
+- 模型預設從 `storage.googleapis.com` 直接下載；若瀏覽器因跨來源限制失敗，把檔案放到 `data/bert_classifier.tflite`（已加入 `.gitignore` 的做法同 SST-2）並以本機伺服器開啟，進階選項填 `{"modelUrl":"../data/bert_classifier.tflite"}`。
+- LiteRT 的 WebAssembly 由函式庫自行載入，冷啟動無法略過 HTTP 快取，因此只有 `.tflite` 符合冷、暖啟動定義；此方案不納入正式冷暖啟動比較。
+
 ## 冷啟動程序
 
 網頁無法清除 HTTP 快取。每台裝置的冷啟動量測前，請用新的瀏覽器設定檔，或以瀏覽器的「清除網站資料」功能清除受測網站的資料，再勾選頁面上的確認欄位。頁面會以 M1 事後檢查：冷啟動輪的傳輸量低於預期模型大小的 80% 時標記為 `suspect-cached`，該輪冷啟動數據應存疑。
