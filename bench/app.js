@@ -157,6 +157,7 @@ function renderResults(state) {
     ['階段', (g) => (g.phase === 'cold' ? '冷' : '暖')], ['有效/總輪', (g) => `${g.validRounds}/${g.rounds}`],
     ['M1 下載量 (MB)', (g) => cell(g.metrics.M1_transferBytes, 1e6)],
     ['M1 函式庫讀取 (MB)', (g) => cell(g.metrics.M1_libraryBytes, 1e6)],
+    ['M1 快取存放 (MB)', (g) => cell(g.metrics.M1_cacheStorageBytes, 1e6)],
     ['M2/M3 準備 (ms)', (g) => cell(g.metrics.M2 || g.metrics.M3)],
     ['M4 首次推論 (ms)', (g) => cell(g.metrics.M4)], ['M5 穩態推論 (ms)', (g) => cell(g.metrics.M5)],
     ['M6 (tokens/s)', (g) => cell(g.metrics.M6)],

@@ -88,3 +88,26 @@ export async function dispose() {
 }
 
 export { resourceBytes };
+
+// 瀏覽器 Cache Storage 內實際存放的位元組數（不受跨來源標頭限制，可作為 M1 的實測依據）。
+// 在準備階段計時結束後才呼叫，不影響 M2 與 M3。
+export async function cacheStorageBytes() {
+  const files = {};
+  let total = 0;
+  try {
+    for (const name of await caches.keys()) {
+      const cache = await caches.open(name);
+      for (const req of await cache.keys()) {
+        const res = await cache.match(req);
+        if (!res) continue;
+        const size = (await res.blob()).size;
+        const path = new URL(req.url).pathname.split('/').slice(-2).join('/');
+        files[`${name}:${path}`] = size;
+        total += size;
+      }
+    }
+  } catch (e) {
+    return { total: null, files, error: String(e && e.message || e) };
+  }
+  return { total, files };
+}

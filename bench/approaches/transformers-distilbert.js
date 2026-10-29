@@ -9,7 +9,7 @@
 //   expectedBytes  覆寫冷啟動檢查的預期模型大小（本機驗證用）
 //   trace       true 時把準備階段的步驟輸出到主控台（除錯用，不影響量測）
 import { createWorkerProxy, loadSentences, resourceBytes } from '../bench.js';
-import { prepare, classify, dispose, loadLibrary, EXPECTED_BYTES } from './transformers-core.js';
+import { prepare, classify, dispose, loadLibrary, cacheStorageBytes, EXPECTED_BYTES } from './transformers-core.js';
 
 const ALLOWED_DTYPE = ['fp32', 'fp16', 'int8'];
 const ALLOWED_DEVICE = ['webgpu', 'wasm'];
@@ -73,7 +73,8 @@ export default {
   async getTransferBytes(handle, sinceEpochMs) {
     const rt = handle.proxy ? await handle.proxy.call('__resourceBytes__', { sinceEpochMs }) : resourceBytes(sinceEpochMs);
     const { cacheEntriesBefore, libraryBytes, dtype, device, numThreads, libraryVersion, ortVersion } = handle.info;
-    return { ...rt, cacheEntriesBefore, libraryBytes, config: { dtype, device, numThreads, libraryVersion, ortVersion } };
+    const cs = handle.proxy ? await handle.proxy.call('cacheBytes') : await cacheStorageBytes();
+    return { ...rt, cacheStorageBytes: cs.total, cacheStorageFiles: cs.files, cacheEntriesBefore, libraryBytes, config: { dtype, device, numThreads, libraryVersion, ortVersion } };
   },
 
   async dispose(handle) {
