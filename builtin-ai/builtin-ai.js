@@ -1,6 +1,6 @@
 // Chrome 內建 AI（Prompt API，LanguageModel）檢查與量測。版本 0.1.0。
 // 流程：檢查可用性 → 建立工作階段並下載模型（冷啟動）→ 36 句準確率 → 暖啟動 5 輪 × 10 次推論。
-const VERSION = '0.1.0';
+const VERSION = '0.1.1';
 const $ = (id) => document.getElementById(id);
 const median = (a) => { const s = [...a].sort((x, y) => x - y); const n = s.length; return n ? (n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2) : null; };
 const SCHEMA = { type: 'string', enum: ['POSITIVE', 'NEGATIVE'] };
@@ -110,34 +110,50 @@ $('btnAcc').onclick = async () => {
   setBusy(false); refresh();
 };
 
-// 4. 暖啟動：模型已在本機。5 輪，每輪新建工作階段（記錄建立時間），連續 10 次推論（第 1 次與第 2 至 10 次分開）
+// 4. 暖啟動：模型已在本機。5 輪，每輪新建工作階段（記錄建立時間），連續 10 次推論（第 1 次與第 2 至 10 次分開）。
+// 任一輪失敗時記錄失敗階段與錯誤內容，等待 3 秒後繼續下一輪；連續失敗 3 輪就停止。
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 $('btnWarm').onclick = async () => {
   setBusy(true);
+  result.warm = []; result.warmFailures = [];
   try {
     const items = await loadSentences();
-    result.warm = [];
-    for (let round = 1; round <= 5; round++) {
-      status(`暖啟動第 ${round}/5 輪`);
-      const t0 = performance.now();
-      const session = await self.LanguageModel.create(OPTIONS);
-      const createMs = performance.now() - t0;
-      const calls = [];
-      for (let i = 0; i < 10; i++) {
-        const it = items[i % items.length];
-        const r = await timedPrompt(session, it.text);
-        calls.push({ i, ms: r.ms, label: r.label, expected: it.label, correct: r.label === it.label });
+    let consecutive = 0;
+    for (let round = 1; round <= 8 && result.warm.length < 5 && consecutive < 3; round++) {
+      status(`暖啟動第 ${round} 次嘗試（已成功 ${result.warm.length}/5 輪）`);
+      let stage = 'create', session = null;
+      try {
+        const t0 = performance.now();
+        session = await self.LanguageModel.create(OPTIONS);
+        const createMs = performance.now() - t0;
+        const calls = [];
+        for (let i = 0; i < 10; i++) {
+          stage = `prompt ${i + 1}`;
+          const it = items[i % items.length];
+          const r = await timedPrompt(session, it.text);
+          calls.push({ i, ms: r.ms, label: r.label, expected: it.label, correct: r.label === it.label });
+        }
+        result.warm.push({ attempt: round, createMs, firstMs: calls[0].ms, steadyMedianMs: median(calls.slice(1).map((c) => c.ms)), calls });
+        consecutive = 0;
+      } catch (e) {
+        consecutive++;
+        result.warmFailures.push({ attempt: round, stage, name: e && e.name, message: String((e && e.message) || e), availability: await self.LanguageModel.availability({ expectedInputs: OPTIONS.expectedInputs, expectedOutputs: OPTIONS.expectedOutputs }).catch((x) => 'error:' + x) });
+        status(`第 ${round} 次嘗試失敗（階段：${stage}）：${e && e.message}`, true);
+      } finally {
+        try { session && session.destroy(); } catch { /* 忽略 */ }
+        await sleep(3000);
       }
-      session.destroy();
-      result.warm.push({ round, createMs, firstMs: calls[0].ms, steadyMedianMs: median(calls.slice(1).map((c) => c.ms)), calls });
     }
-    status('暖啟動量測完成');
+    status(`暖啟動量測結束：成功 ${result.warm.length} 輪，失敗 ${result.warmFailures.length} 次`);
   } catch (e) { status('暖啟動量測失敗：' + e.message, true); result.warmError = String(e); }
   setBusy(false); refresh();
 };
 
-$('btnDownload').onclick = () => {
-  const env = result.environment || {};
+$('btnDownload').onclick = async () => {
+  const envNow = await environment();
+  const env = { ...(result.environment || {}), ...envNow };
   const name = `builtin-ai-${env.device || 'device'}-${env.browser || 'browser'}-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+  result.environment = { ...(result.environment || {}), ...(await environment()) }; // 下載時重新讀取欄位
   result.exportedAt = new Date().toISOString();
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' }));
@@ -151,6 +167,7 @@ function renderSummary() {
   if (s.check) rows.push(['可用性', s.check.apiExists ? s.check.availability : 'API 不存在']);
   if (result.cold) rows.push(['冷啟動建立 (ms)', result.cold.error ? '失敗：' + result.cold.error : `${fmt(result.cold.createMs, 0)}（建立前：${result.cold.availabilityBefore}，下載事件 ${result.cold.downloadEvents} 次）`], ['冷啟動後第 1 次推論 (ms)', fmt(result.cold.firstPromptMs)]);
   if (result.accuracy && !result.accuracy.error) rows.push(['36 句準確率', `${result.accuracy.correct}/${result.accuracy.total}`], ['單句推論中位數 (ms)', fmt(result.accuracy.medianMs)]);
+  if (result.warmFailures && result.warmFailures.length) rows.push(['暖啟動失敗', result.warmFailures.map((f) => `第 ${f.attempt} 次（${f.stage}）：${f.message}`).join('；')]);
   if (result.warm.length) {
     rows.push(['暖啟動建立 (ms)', `${fmt(median(result.warm.map((w) => w.createMs)))}（${fmt(Math.min(...result.warm.map((w) => w.createMs)))} 至 ${fmt(Math.max(...result.warm.map((w) => w.createMs)))}）`]);
     rows.push(['第 1 次推論 (ms)', `${fmt(median(result.warm.map((w) => w.firstMs)))}（${fmt(Math.min(...result.warm.map((w) => w.firstMs)))} 至 ${fmt(Math.max(...result.warm.map((w) => w.firstMs)))}）`]);
