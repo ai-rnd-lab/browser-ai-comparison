@@ -403,6 +403,7 @@ export function aggregate(records) {
       metrics: {
         M1_transferBytes: summarize(pick((r) => [r.bytes?.transferBytes])),
         M1_libraryBytes: summarize(pick((r) => [r.bytes?.libraryBytes])),
+        M1_cacheStorageBytes: summarize(pick((r) => [r.bytes?.cacheStorageBytes])),
         [prepKey]: summarize(pick((r) => [r.metrics[prepKey]])),
         M4: summarize(pick((r) => [r.metrics.M4])),
         M5: summarize(pick((r) => steady(r).map((c) => c.latencyMs))),

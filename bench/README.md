@@ -1,6 +1,6 @@
 # 量測框架（bench）
 
-瀏覽器端 AI 方案比較用的量測頁與共用程式。版本 0.2.0；含「框架自我檢查」用的模擬方案與任務 A 的 Transformers.js 方案；ONNX Runtime Web、LiteRT.js、WebLLM、Chrome 內建 AI 於後續加入。
+瀏覽器端 AI 方案比較用的量測頁與共用程式。版本 0.2.1；含「框架自我檢查」用的模擬方案與任務 A 的 Transformers.js 方案；ONNX Runtime Web、LiteRT.js、WebLLM、Chrome 內建 AI 於後續加入。
 
 ## 使用方式
 
