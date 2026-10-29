@@ -1,6 +1,6 @@
 // Chrome 內建 AI（Prompt API，LanguageModel）檢查與量測。版本 0.1.0。
 // 流程：檢查可用性 → 建立工作階段並下載模型（冷啟動）→ 36 句準確率 → 暖啟動 5 輪 × 10 次推論。
-const VERSION = '0.1.1';
+const VERSION = '0.1.2';
 const $ = (id) => document.getElementById(id);
 const median = (a) => { const s = [...a].sort((x, y) => x - y); const n = s.length; return n ? (n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2) : null; };
 const SCHEMA = { type: 'string', enum: ['POSITIVE', 'NEGATIVE'] };
@@ -128,12 +128,19 @@ $('btnWarm').onclick = async () => {
         const createMs = performance.now() - t0;
         const calls = [];
         for (let i = 0; i < 10; i++) {
-          stage = `prompt ${i + 1}`;
+          // 每次推論使用複製出的工作階段（與準確率檢查相同做法）；同一工作階段連續推論的失敗現象見 warmFailures 與 NOTES
+          stage = `clone ${i + 1}`;
           const it = items[i % items.length];
-          const r = await timedPrompt(session, it.text);
-          calls.push({ i, ms: r.ms, label: r.label, expected: it.label, correct: r.label === it.label });
+          const c0 = performance.now();
+          const clone = await session.clone();
+          const cloneMs = performance.now() - c0;
+          stage = `prompt ${i + 1}`;
+          try {
+            const r = await timedPrompt(clone, it.text);
+            calls.push({ i, cloneMs, promptMs: r.ms, ms: cloneMs + r.ms, label: r.label, expected: it.label, correct: r.label === it.label });
+          } finally { try { clone.destroy(); } catch { /* 忽略 */ } }
         }
-        result.warm.push({ attempt: round, createMs, firstMs: calls[0].ms, steadyMedianMs: median(calls.slice(1).map((c) => c.ms)), calls });
+        result.warm.push({ attempt: round, createMs, firstMs: calls[0].ms, steadyMedianMs: median(calls.slice(1).map((c) => c.ms)), steadyPromptMedianMs: median(calls.slice(1).map((c) => c.promptMs)), calls });
         consecutive = 0;
       } catch (e) {
         consecutive++;
@@ -172,7 +179,8 @@ function renderSummary() {
     rows.push(['暖啟動建立 (ms)', `${fmt(median(result.warm.map((w) => w.createMs)))}（${fmt(Math.min(...result.warm.map((w) => w.createMs)))} 至 ${fmt(Math.max(...result.warm.map((w) => w.createMs)))}）`]);
     rows.push(['第 1 次推論 (ms)', `${fmt(median(result.warm.map((w) => w.firstMs)))}（${fmt(Math.min(...result.warm.map((w) => w.firstMs)))} 至 ${fmt(Math.max(...result.warm.map((w) => w.firstMs)))}）`]);
     const steady = result.warm.flatMap((w) => w.calls.slice(1).map((c) => c.ms));
-    rows.push(['穩態推論 (ms)', `${fmt(median(steady))}（${fmt(Math.min(...steady))} 至 ${fmt(Math.max(...steady))}）n=${steady.length}`]);
+    rows.push(['穩態推論，僅 prompt (ms)', `${fmt(median(result.warm.flatMap((w) => w.calls.slice(1).map((c) => c.promptMs))))}`]);
+    rows.push(['穩態推論，複製加 prompt (ms)', `${fmt(median(steady))}（${fmt(Math.min(...steady))} 至 ${fmt(Math.max(...steady))}）n=${steady.length}`]);
   }
   $('summary').innerHTML = rows.map((r) => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('');
 }
