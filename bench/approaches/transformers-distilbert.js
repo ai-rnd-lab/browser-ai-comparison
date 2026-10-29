@@ -7,6 +7,7 @@
 //   wasmPaths   覆寫 WebAssembly 檔位置，格式 {"mjs":"…","wasm":"…"}（本機驗證用）
 //   remoteHost  覆寫模型來源，預設 Hugging Face（本機驗證用）
 //   expectedBytes  覆寫冷啟動檢查的預期模型大小（本機驗證用）
+//   dataset     sst2 時改用本機 SST-2 驗證集（見 getInputs）
 //   trace       true 時把準備階段的步驟輸出到主控台（除錯用，不影響量測）
 import { createWorkerProxy, loadSentences, resourceBytes } from '../bench.js';
 import { prepare, classify, dispose, loadLibrary, cacheStorageBytes, EXPECTED_BYTES } from './transformers-core.js';
@@ -43,7 +44,19 @@ export default {
     return EXPECTED_BYTES[(options && options.dtype) || 'fp16'];
   },
 
-  async getInputs() { const { inputs, labels } = await loadSentences(); return { inputs, labels }; },
+  // dataset: "sst2" 時改讀本機的 SST-2 驗證集（../data/sst2-validation.json，不納入版本紀錄；
+  // 只能從本機伺服器開啟量測頁時使用）。每輪推論次數請設為 872 以涵蓋全部句子。
+  async getInputs(ctx) {
+    const o = (ctx && ctx.options) || {};
+    if (o.dataset === 'sst2') {
+      const res = await fetch(new URL('../../data/sst2-validation.json', import.meta.url), { cache: 'no-store' });
+      if (!res.ok) throw new Error('找不到 data/sst2-validation.json（此檔只存在於本機，請從本機伺服器開啟量測頁）');
+      const { items } = await res.json();
+      return { inputs: items.map((x) => x.text), labels: items.map((x) => x.label) };
+    }
+    const { inputs, labels } = await loadSentences();
+    return { inputs, labels };
+  },
 
   // 函式庫載入與 Worker 建立不計入準備時間
   async load(ctx) {

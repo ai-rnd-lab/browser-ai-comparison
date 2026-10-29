@@ -54,6 +54,7 @@ M7（記憶體峰值）與 M8（整合成本）不由本頁量測，M7 以活動
 
 - 函式庫 Transformers.js 4.3.1（jsdelivr 的 `dist/transformers.min.js`），模型 `Xenova/distilbert-base-uncased-finetuned-sst-2-english`。支援主執行緒與 Worker。
 - 進階選項（JSON）：`dtype`（`fp16` 預設、`int8`、`fp32`）、`device`（`webgpu` 預設、`wasm`）、`numThreads`（1 到 32，只影響 wasm，例如單執行緒對照）。另有本機驗證用的 `libraryUrl`、`wasmPaths`、`remoteHost`、`expectedBytes`，以及除錯用的 `trace`。
+- SST-2 準確率檢查（只在本機）：進階選項加上 `"dataset":"sst2"`，每輪推論次數填 `872`，冷啟動 1 輪、暖啟動 0 輪。資料檔 `data/sst2-validation.json` 不納入版本紀錄（已列入 `.gitignore`），因此必須從本機伺服器（例如在 `site/` 執行 `python3 -m http.server 8000`，開 `http://127.0.0.1:8000/bench/`）開啟量測頁，GitHub Pages 上沒有這個檔。
 - 每輪逾時：頁面有「每輪逾時（秒）」欄位（預設 300）。超時的輪次記為 `timeout`、不計入有效樣本，並自動重新載入、繼續排程。
 - 冷啟動的 M1 包含預設的 WebAssembly 執行檔（約 27 MB，來自 jsdelivr）；函式庫的進度事件在快取命中時也會觸發，因此「函式庫位元組」不等於下載量，僅用於冷啟動檢查的輔助判斷。
 - 「M1 快取存放」：準備完成後，加總 Cache Storage 內所有項目的實際大小（含模型、分詞器、WebAssembly 檔），不受跨來源標頭限制，是 M1 的主要實測依據；`transferSize` 在跨來源且無 Timing-Allow-Origin 時只算得到一部分，僅作參考。各檔案大小記在每輪的 `bytes.cacheStorageFiles`。

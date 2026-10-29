@@ -61,7 +61,7 @@
       <legend>環境標記（請用中性代號，不要填人名或裝置自訂名稱）</legend>
       <label>裝置代號 <input type="text" id="device" placeholder="例如 macmini" maxlength="32"></label>
       <label>瀏覽器代號 <input type="text" id="browser" placeholder="例如 chrome156" maxlength="32"></label>
-      <label>網路備註 <input type="text" id="network" placeholder="例如 wifi 或 ethernet（只寫連線方式，不寫地點）" maxlength="48"></label>
+      <label>網路備註 <input type="text" id="network" placeholder="例如 office-wifi" maxlength="48"></label>
     </fieldset>
     <fieldset>
       <legend>受測方案</legend>
@@ -78,7 +78,7 @@
       </label>
       <label>冷啟動輪數 <input type="number" id="cold" value="5" min="0" max="20"></label>
       <label>暖啟動輪數 <input type="number" id="warm" value="5" min="0" max="20"></label>
-      <label>每輪推論次數 <input type="number" id="calls" value="10" min="2" max="50"></label>
+      <label>每輪推論次數 <input type="number" id="calls" value="10" min="2" max="1000"></label>
       <label>每輪逾時（秒）<input type="number" id="timeout" value="300" min="10" max="3600"></label>
       <br>
       <label><input type="checkbox" id="heartbeat"> 量測主執行緒阻塞（M9，只在 Mac mini 的 Chrome 使用）</label>

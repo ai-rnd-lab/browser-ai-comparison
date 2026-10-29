@@ -57,7 +57,7 @@ async function executeStep(state, step) {
   const approach = (await APPROACHES[step.approach].load()).default;
   // 冷啟動：先清除網站資料，再載入函式庫與模型
   const clearReport = step.phase === 'cold' ? await clearSiteData() : null;
-  const got = approach.getInputs ? await approach.getInputs() : approach.defaultInputs;
+  const got = approach.getInputs ? await approach.getInputs({ options: state.config.options || {} }) : approach.defaultInputs;
   const inputs = Array.isArray(got) ? got : got.inputs;
   const labels = Array.isArray(got) ? null : got.labels || null;
   const rec = await runRound(approach, {
@@ -227,7 +227,7 @@ function readConfig() {
   return {
     device, browser, network: $('network').value.trim(), approaches,
     modes: $('modes').value, coldRounds: num('cold', 0, 20), warmRounds: num('warm', 0, 20),
-    inferCalls: num('calls', 2, 50), roundTimeoutSec: num('timeout', 10, 3600),
+    inferCalls: num('calls', 2, 1000), roundTimeoutSec: num('timeout', 10, 3600),
     heartbeat: $('heartbeat').checked, httpCacheCleared: $('httpcache').checked,
     options,
   };
