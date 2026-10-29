@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chrome 內建 AI 檢查頁</title>
+<style>
+  :root { --bg:#fff; --fg:#1f2328; --muted:#59636e; --line:#d1d9e0; --card:#f6f8fa; --bad:#cf222e; --ok:#1a7f37; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0d1117; --fg:#e6edf3; --muted:#9198a1; --line:#3d444d; --card:#151b23; --bad:#f85149; --ok:#3fb950; } }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:16px; background:var(--bg); color:var(--fg); font:15px/1.6 -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif; }
+  main { max-width: 900px; margin: 0 auto; }
+  h1 { font-size:1.4rem; margin:0 0 4px; } h2 { font-size:1.05rem; margin:20px 0 6px; padding-bottom:4px; border-bottom:1px solid var(--line); }
+  p.note { color:var(--muted); margin:0 0 12px; }
+  fieldset { border:1px solid var(--line); border-radius:6px; margin:0 0 12px; padding:8px 12px; }
+  legend { color:var(--muted); padding:0 6px; }
+  input[type=text], input[type=number] { font:inherit; padding:3px 6px; border:1px solid var(--line); border-radius:4px; background:var(--bg); color:var(--fg); }
+  label { display:inline-flex; align-items:center; gap:6px; margin:4px 14px 4px 0; }
+  button { font:inherit; padding:6px 14px; border-radius:6px; cursor:pointer; border:1px solid var(--line); background:var(--card); color:var(--fg); margin:0 8px 8px 0; }
+  button:disabled { opacity:.5; cursor:default; }
+  pre { background:var(--card); padding:8px; border-radius:6px; overflow:auto; max-height:320px; font-size:.85em; }
+  table { border-collapse:collapse; font-size:.9rem; } th,td { padding:4px 8px; border-bottom:1px solid var(--line); text-align:right; white-space:nowrap; } th:first-child,td:first-child { text-align:left; }
+  .scroll { overflow-x:auto; } .bad { color:var(--bad); } #status { color:var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Chrome 內建 AI 檢查頁</h1>
+  <p class="note">檢查 Chrome 內建的 Prompt API（LanguageModel，Gemini Nano）能否使用、首次建立（含模型下載）要多久，以及做情緒分類的準確率與延遲。結果只存在本分頁，不會傳送到任何地方。</p>
+
+  <fieldset>
+    <legend>環境標記（請用中性代號）</legend>
+    <label>裝置代號 <input type="text" id="device" value="macmini" maxlength="32"></label>
+    <label>瀏覽器代號 <input type="text" id="browser" placeholder="例如 chrome156" maxlength="32"></label>
+    <label>網路備註 <input type="text" id="network" placeholder="例如 wifi" maxlength="48"></label>
+    <br>
+    <label>模型版本（到 chrome://on-device-internals 查看後填入，可留空）<input type="text" id="modelVersion" style="width:20em" maxlength="80"></label>
+  </fieldset>
+
+  <h2>步驟</h2>
+  <button id="btnCheck">1. 檢查可用性（不下載）</button>
+  <button id="btnCold" disabled>2. 建立工作階段並下載模型（冷啟動，只能做一次）</button>
+  <button id="btnAcc" disabled>3. 36 句準確率檢查</button>
+  <button id="btnWarm" disabled>4. 暖啟動量測（5 輪 × 10 次）</button>
+  <button id="btnDownload" disabled>下載結果（JSON）</button>
+  <div id="status"></div>
+
+  <h2>彙整</h2>
+  <div class="scroll"><table id="summary"></table></div>
+
+  <h2>原始結果</h2>
+  <details><summary>展開 JSON</summary><pre id="raw"></pre></details>
+</main>
+<script type="module" src="./builtin-ai.js"></script>
+</body>
+</html>
