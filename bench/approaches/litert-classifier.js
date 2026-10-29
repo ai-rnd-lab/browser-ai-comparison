@@ -65,16 +65,16 @@ export default {
     return handle.proxy ? handle.proxy.call('classify', text) : classify(text);
   },
 
-  summarizeOutput(out) { return `${out.label} ${out.score.toFixed(4)}`; },
+  summarizeOutput(out) { return `${out.label} ${out.score.toFixed(4)} raw=[${out.raw.map((x) => x.toFixed(4))}] tokens=${out.tokens} ids=[${out.firstIds}]`; },
   labelOf(out) { return out.label; },
 
   // Worker 的資源紀錄不會出現在主執行緒，所以由 Worker 自己回報；再併入準備階段的函式庫回報資訊
   async getTransferBytes(handle, sinceEpochMs) {
     const rt = handle.proxy ? await handle.proxy.call('__resourceBytes__', { sinceEpochMs }) : resourceBytes(sinceEpochMs);
-    const { cacheEntriesBefore, libraryBytes, device, numThreads, libraryVersion, ortVersion } = handle.info;
+    const { cacheEntriesBefore, libraryBytes, device, numThreads, libraryVersion, ortVersion, inputs, inputDetails, outputDetails } = handle.info;
     const dtype = 'model-defined';
     const cs = handle.proxy ? await handle.proxy.call('cacheBytes') : await cacheStorageBytes();
-    return { ...rt, cacheStorageBytes: cs.total, cacheStorageFiles: cs.files, cacheEntriesBefore, libraryBytes, config: { dtype, device, numThreads, libraryVersion, ortVersion } };
+    return { ...rt, cacheStorageBytes: cs.total, cacheStorageFiles: cs.files, cacheEntriesBefore, libraryBytes, config: { dtype, device, numThreads, libraryVersion, ortVersion, inputs, inputDetails, outputDetails } };
   },
 
   async dispose(handle) {

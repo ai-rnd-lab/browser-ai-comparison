@@ -96,6 +96,8 @@ export async function prepare(options = {}) {
     accelerator, device: accelerator, libraryVersion: LITERT_VERSION, ortVersion: null, numThreads: options.threads === true ? 'threaded' : 1,
     cacheEntriesBefore, libraryBytes: modelBytes.byteLength, files: { model: modelBytes.byteLength, ...Object.fromEntries(Object.entries(files).map(([k, v]) => [k, v.byteLength])) },
     inputs: inputPlan, labels,
+    inputDetails: model.getInputDetails().map((d) => ({ name: d.name, dtype: String(d.dtype), shape: Array.from(d.shape) })),
+    outputDetails: model.getOutputDetails().map((d) => ({ name: d.name, dtype: String(d.dtype), shape: Array.from(d.shape) })),
   };
 }
 
@@ -116,7 +118,7 @@ export async function classify(text) {
   const inUnit = raw.every((x) => x >= 0 && x <= 1) && Math.abs(raw.reduce((a, b) => a + b, 0) - 1) < 1e-3;
   if (!inUnit) { const m = Math.max(...raw); const e = raw.map((x) => Math.exp(x - m)); const s = e.reduce((a, b) => a + b, 0); p = e.map((x) => x / s); }
   const k = p.indexOf(Math.max(...p));
-  return { label: labels[k] ?? String(k), score: p[k] };
+  return { label: labels[k] ?? String(k), score: p[k], raw, tokens: n, firstIds: ids.slice(0, 6) };
 }
 
 export async function dispose() {
