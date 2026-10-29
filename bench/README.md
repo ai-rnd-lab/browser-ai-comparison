@@ -63,6 +63,13 @@ M7（記憶體峰值）與 M8（整合成本）不由本頁量測，M7 以活動
 - 已知現象：主執行緒 + 多執行緒 wasm 在無頭 Chromium 的第二次載入曾卡住，原因未查明；逾時保護會把該輪記為 timeout。真機結果以 Mac mini 為準。
 - 本機驗證只用假模型（非 DistilBERT），僅證明流程；真實模型數據尚未量測。
 
+## 受測方案：ONNX Runtime Web 直接呼叫 + DistilBERT（任務 A 對照）
+
+- 用途：與 Transformers.js 使用同一份 ONNX 檔與同一版 ONNX Runtime Web（1.31.0-dev.20260914-8d85527a0），分詞由 `approaches/ort-core.js` 自行實作（BERT uncased WordPiece），用來比較函式庫這一層的額外成本。
+- 進階選項與 Transformers.js 方案相同：`dtype`、`device`、`numThreads`、`dataset`。
+- 快取：模型、分詞器、設定檔、WebAssembly 檔都由本檔取得並存入名為 `bench-ort-cache` 的 Cache Storage；冷啟動略過 HTTP 快取，暖啟動讀 Cache Storage。
+- 分詞器只用假模型的詞表驗證過輸出一致，真實詞表須以 SST-2 逐句比對兩個方案的輸出。
+
 ## 冷啟動程序
 
 網頁無法清除 HTTP 快取。每台裝置的冷啟動量測前，請用新的瀏覽器設定檔，或以瀏覽器的「清除網站資料」功能清除受測網站的資料，再勾選頁面上的確認欄位。頁面會以 M1 事後檢查：冷啟動輪的傳輸量低於預期模型大小的 80% 時標記為 `suspect-cached`，該輪冷啟動數據應存疑。
