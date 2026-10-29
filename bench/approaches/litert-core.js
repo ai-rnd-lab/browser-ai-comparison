@@ -91,7 +91,10 @@ export async function prepare(options = {}) {
   await L.loadLiteRt(options.wasmDir || LITERT_BASE + 'wasm/', { threads: options.threads === true });
   model = await L.loadAndCompile(modelBytes, { accelerator });
 
-  inputPlan = model.getInputDetails().map((d) => (/seg/i.test(d.name) ? 'segment' : /mask/i.test(d.name) ? 'mask' : 'ids'));
+  // 輸入名稱依模型而異（例如 input_word_ids / input_type_ids / input_mask 或 ids / segment_ids / mask），用名稱關鍵字對應；
+  // 對應結果必須剛好是 ids、segment、mask 各一個，否則直接報錯，避免把詞彙編號誤當成段落編號。
+  inputPlan = model.getInputDetails().map((d) => (/seg|type/i.test(d.name) ? 'segment' : /mask/i.test(d.name) ? 'mask' : 'ids'));
+  if ([...inputPlan].sort().join() !== 'ids,mask,segment') throw new Error('無法辨認模型輸入：' + model.getInputDetails().map((d) => d.name).join('、'));
   return {
     accelerator, device: accelerator, libraryVersion: LITERT_VERSION, ortVersion: null, numThreads: options.threads === true ? 'threaded' : 1,
     cacheEntriesBefore, libraryBytes: modelBytes.byteLength, files: { model: modelBytes.byteLength, ...Object.fromEntries(Object.entries(files).map(([k, v]) => [k, v.byteLength])) },

@@ -2,7 +2,7 @@
 // 計時一律使用 performance.now()；各指標的起訖點見 README「指標操作型定義」。
 // 本檔也會被 Web Worker 匯入，因此頂層不可存取 document 或 window。
 
-export const BENCH_VERSION = '0.2.3';
+export const BENCH_VERSION = '0.2.4';
 export const SCHEMA_VERSION = 1;
 export const HEARTBEAT_INTERVAL_MS = 16;
 
