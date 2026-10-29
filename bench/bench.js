@@ -120,11 +120,20 @@ export function resourceBytes(sinceEpochMs) {
   return { count, transferBytes, encodedBodyBytes, opaqueCount, swHandledCount };
 }
 
-// 冷啟動是否真的重新下載：傳輸量達預期模型大小的 80% 才視為有效。
-// 傳輸量不足時，若有無法量測的資源，回報 unavailable（不下結論），否則回報 suspect-cached。
-export function coldCheck(bytes, expectedModelBytes) {
+// 準備階段是否符合冷／暖啟動的前提。
+// 冷啟動：Resource Timing 的傳輸量達預期模型大小的 80% 才視為真的重新下載。
+//   傳輸量看不到時（跨來源未提供 Timing-Allow-Origin，或經 Service Worker），改看方案自行回報的
+//   cacheEntriesBefore（準備前的快取筆數）與 libraryBytes（函式庫讀到的模型位元組數）：
+//   快取為空且讀到足量位元組，回報 ok-library；否則回報 unavailable，不下結論。
+// 暖啟動：方案若回報 cacheEntriesBefore 為 0，代表快取是空的，回報 suspect-not-cached。
+export function prepCheck(phase, bytes, expectedModelBytes) {
   if (!expectedModelBytes) return 'no-expectation';
+  if (phase === 'warm') {
+    if (bytes.cacheEntriesBefore === 0) return 'suspect-not-cached';
+    return bytes.transferBytes >= expectedModelBytes * 0.2 ? 'suspect-downloaded' : 'ok';
+  }
   if (bytes.transferBytes >= expectedModelBytes * 0.8) return 'ok';
+  if (bytes.cacheEntriesBefore === 0 && bytes.libraryBytes >= expectedModelBytes * 0.8) return 'ok-library';
   return bytes.opaqueCount > 0 || bytes.swHandledCount > 0 ? 'unavailable' : 'suspect-cached';
 }
 
@@ -177,7 +186,7 @@ export async function storageEstimate() {
 
 // ---------- 測試資料 ----------
 // 載入公開組的情緒分類句子（site/data/sentiment-en.json）。
-// 回傳 { items, inputs }：items 保留標註與長度組別，inputs 為純文字陣列，供 runRound 循環使用。
+// 回傳 { items, inputs, labels }：三者順序一致，inputs 為純文字，labels 為撰寫者的標註，供 runRound 循環使用。
 // 推論輸出與 label 的比對由各方案自行處理（輸出格式不同），框架只保存輸出摘要。
 export async function loadSentences(url = new URL('../data/sentiment-en.json', import.meta.url)) {
   const res = await fetch(url);
@@ -186,7 +195,14 @@ export async function loadSentences(url = new URL('../data/sentiment-en.json', i
   if (data.schemaVersion !== 1 || !Array.isArray(data.items) || !data.items.length) {
     throw new Error('測試資料格式不符');
   }
-  return { items: data.items, inputs: data.items.map((it) => it.text) };
+  // 依長度組別輪流取句（短、中、長、短、中、長…），讓每輪前 N 次推論都涵蓋三種長度
+  const groups = ['short', 'medium', 'long'].map((g) => data.items.filter((it) => it.length === g));
+  const items = [];
+  for (let i = 0; groups.some((g) => i < g.length); i++) {
+    for (const g of groups) if (i < g.length) items.push(g[i]);
+  }
+  if (items.length !== data.items.length) throw new Error('測試資料含未知的長度組別');
+  return { items, inputs: items.map((it) => it.text), labels: items.map((it) => it.label) };
 }
 
 // ---------- 分頁可見性 ----------
@@ -283,13 +299,13 @@ export function createWorkerProxy(url, options = { type: 'module' }) {
 //   getTransferBytes?(handle, sinceEpochMs)  Worker 模式須由 Worker 回報自己的資源傳輸量
 //   dispose?(handle)
 //   getInputs? / defaultInputs
-export async function runRound(approach, { mode, phase, inferCalls = 10, inputs, heartbeat = false, options = {}, visibility }) {
+export async function runRound(approach, { mode, phase, inferCalls = 10, inputs, labels = null, heartbeat = false, options = {}, visibility }) {
   const rec = {
     approach: approach.id, kind: approach.kind, mode, phase,
     startedAt: new Date().toISOString(),
     valid: false, flags: [], error: null, metrics: {}, calls: [],
   };
-  const ctx = { mode, options, shared: {} };
+  const ctx = { mode, phase, options, shared: {} };
   let handle = null;
   try {
     await approach.load?.(ctx);
@@ -309,14 +325,17 @@ export async function runRound(approach, { mode, phase, inferCalls = 10, inputs,
 
     // M1：準備階段內的資源傳輸量
     rec.bytes = approach.getTransferBytes ? await approach.getTransferBytes(handle, sinceEpoch) : resourceBytes(sinceEpoch);
-    if (phase === 'cold') rec.coldCheck = coldCheck(rec.bytes, approach.expectedModelBytes);
+    const expectedBytes = approach.expectedBytesFor ? approach.expectedBytesFor(options) : approach.expectedModelBytes;
+    rec.expectedModelBytes = expectedBytes ?? null;
+    rec.prepCheck = prepCheck(phase, rec.bytes, expectedBytes);
+    if (phase === 'cold') rec.coldCheck = rec.prepCheck;
 
     // M4、M5、M6
     for (let i = 0; i < inferCalls; i++) {
       const input = inputs[i % inputs.length];
       const stamps = [];
       const hooks = { onToken: (n = 1) => { const t = now(); for (let k = 0; k < n; k++) stamps.push(t); } };
-      const call = { i: i + 1, latencyMs: null, totalMs: null, tokens: null, tokensPerSec: null, block: null, output: null };
+      const call = { i: i + 1, latencyMs: null, totalMs: null, tokens: null, tokensPerSec: null, block: null, output: null, expected: null, correct: null };
       hb?.start();
       const t0 = now();
       let out;
@@ -336,6 +355,11 @@ export async function runRound(approach, { mode, phase, inferCalls = 10, inputs,
         call.latencyMs = call.totalMs;
       }
       call.output = (approach.summarizeOutput ? approach.summarizeOutput(out) : JSON.stringify(out)).slice(0, 300);
+      if (labels) {
+        call.expected = labels[i % labels.length];
+        const got = approach.labelOf ? approach.labelOf(out) : out && out.label;
+        call.correct = got === call.expected;
+      }
       rec.calls.push(call);
     }
     rec.metrics.M4 = rec.calls[0]?.latencyMs ?? null;
@@ -371,8 +395,14 @@ export function aggregate(records) {
       validRounds: ok.length,
       excluded: recs.filter((r) => !r.valid).map((r) => ({ round: r.round ?? null, reason: r.error || (r.crashed ? 'crashed' : r.flags.join(',')) })),
       coldCheck: phase === 'cold' ? recs.map((r) => r.coldCheck ?? null) : undefined,
+      warmCheck: phase === 'warm' ? recs.map((r) => r.prepCheck ?? null) : undefined,
+      accuracy: (() => {
+        const calls = ok.flatMap((r) => r.calls).filter((c) => c.correct !== null);
+        return calls.length ? { correct: calls.filter((c) => c.correct).length, total: calls.length } : null;
+      })(),
       metrics: {
         M1_transferBytes: summarize(pick((r) => [r.bytes?.transferBytes])),
+        M1_libraryBytes: summarize(pick((r) => [r.bytes?.libraryBytes])),
         [prepKey]: summarize(pick((r) => [r.metrics[prepKey]])),
         M4: summarize(pick((r) => [r.metrics.M4])),
         M5: summarize(pick((r) => steady(r).map((c) => c.latencyMs))),

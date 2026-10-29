@@ -1,6 +1,6 @@
 # 量測框架（bench）
 
-瀏覽器端 AI 方案比較用的量測頁與共用程式。版本 0.1.0；目前只含「框架自我檢查」用的模擬方案，真正的受測方案（Transformers.js、ONNX Runtime Web、LiteRT.js、WebLLM、Chrome 內建 AI）於後續加入。
+瀏覽器端 AI 方案比較用的量測頁與共用程式。版本 0.2.0；含「框架自我檢查」用的模擬方案與任務 A 的 Transformers.js 方案；ONNX Runtime Web、LiteRT.js、WebLLM、Chrome 內建 AI 於後續加入。
 
 ## 使用方式
 
@@ -37,7 +37,7 @@ M7（記憶體峰值）與 M8（整合成本）不由本頁量測，M7 以活動
 ## 測試資料
 
 - 公開組：`../data/sentiment-en.json`，36 句自行撰寫的英文句子，附正負面標註。依字數分短（5 到 7 字）、中（18 到 22 字）、長（35 到 43 字）三組，每組正負面各 6 句，正負面交錯排列。標註為撰寫者的原意，不是模型輸出；不轉載任何資料集內容。
-- 載入：`bench.js` 的 `loadSentences()` 回傳 `{ items, inputs }`，受測方案在 `getInputs()` 使用 `inputs`，並以 `items` 的標註比對輸出。
+- 載入：`bench.js` 的 `loadSentences()` 回傳 `{ items, inputs, labels }`（依短、中、長輪流排列，前 10 句涵蓋三種長度），受測方案在 `getInputs()` 使用 `inputs`，並以 `items` 的標註比對輸出。
 - 本機組：SST-2 驗證集只放在專案根目錄的 `data/raw/`（不納入版本紀錄、不推送），僅在 Mac mini 檢查準確率。
 
 ## 受測方案介面
@@ -49,6 +49,17 @@ M7（記憶體峰值）與 M8（整合成本）不由本頁量測，M7 以活動
 - `infer(handle, input, hooks)`：生成任務每產生 token 呼叫 `hooks.onToken(n)`。
 - `getTransferBytes(handle, sinceEpochMs)`：Worker 模式必須由 Worker 回報自己的傳輸量（可用 `worker-runtime.js` 內建的 `__resourceBytes__`）。
 - 參考實作：`approaches/selftest.js`。
+
+## 受測方案：Transformers.js + DistilBERT（任務 A）
+
+- 函式庫 Transformers.js 4.3.1（jsdelivr 的 `dist/transformers.min.js`），模型 `Xenova/distilbert-base-uncased-finetuned-sst-2-english`。支援主執行緒與 Worker。
+- 進階選項（JSON）：`dtype`（`fp16` 預設、`int8`、`fp32`）、`device`（`webgpu` 預設、`wasm`）、`numThreads`（1 到 32，只影響 wasm，例如單執行緒對照）。另有本機驗證用的 `libraryUrl`、`wasmPaths`、`remoteHost`、`expectedBytes`，以及除錯用的 `trace`。
+- 每輪逾時：頁面有「每輪逾時（秒）」欄位（預設 300）。超時的輪次記為 `timeout`、不計入有效樣本，並自動重新載入、繼續排程。
+- 冷啟動的 M1 包含預設的 WebAssembly 執行檔（約 27 MB，來自 jsdelivr）；函式庫的進度事件在快取命中時也會觸發，因此「函式庫位元組」不等於下載量，僅用於冷啟動檢查的輔助判斷。
+- 冷啟動檢查狀態：`ok`、`ok-library`（transferSize 不可用但函式庫回報足量位元組）、`unavailable`、`suspect-cached`；暖啟動：`ok`、`suspect-not-cached`、`suspect-downloaded`。
+- 每輪記錄準確率（輸出標籤與標註比對），彙整表有準確率欄。
+- 已知現象：主執行緒 + 多執行緒 wasm 在無頭 Chromium 的第二次載入曾卡住，原因未查明；逾時保護會把該輪記為 timeout。真機結果以 Mac mini 為準。
+- 本機驗證只用假模型（非 DistilBERT），僅證明流程；真實模型數據尚未量測。
 
 ## 冷啟動程序
 
