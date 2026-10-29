@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>瀏覽器端 AI 量測頁</title>
+<script src="../coi.js"></script>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1f2328; --muted: #59636e; --line: #d1d9e0;
+    --ok: #1a7f37; --warn: #9a6700; --bad: #cf222e; --card: #f6f8fa;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117; --fg: #e6edf3; --muted: #9198a1; --line: #3d444d;
+      --ok: #3fb950; --warn: #d29922; --bad: #f85149; --card: #151b23;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 16px; background: var(--bg); color: var(--fg);
+    font: 15px/1.6 -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", sans-serif;
+  }
+  main { max-width: 1040px; margin: 0 auto; }
+  h1 { font-size: 1.4rem; margin: 0 0 4px; }
+  h2 { font-size: 1.05rem; margin: 20px 0 6px; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
+  p.note { color: var(--muted); margin: 0 0 12px; }
+  fieldset { border: 1px solid var(--line); border-radius: 6px; margin: 0 0 12px; padding: 8px 12px; }
+  legend { color: var(--muted); padding: 0 6px; }
+  label { display: inline-flex; align-items: center; gap: 6px; margin: 4px 14px 4px 0; }
+  input[type=text], input[type=number], select {
+    font: inherit; padding: 3px 6px; border: 1px solid var(--line); border-radius: 4px;
+    background: var(--bg); color: var(--fg); width: 11em;
+  }
+  input[type=number] { width: 5em; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+  button {
+    font: inherit; padding: 6px 14px; border-radius: 6px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--card); color: var(--fg);
+  }
+  button:disabled { opacity: .5; cursor: default; }
+  #progress { color: var(--muted); }
+  #msg.bad { color: var(--bad); }
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; font-size: .9rem; }
+  th, td { padding: 4px 8px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+  th:nth-child(-n+3), td:nth-child(-n+3) { text-align: left; }
+  th { color: var(--muted); font-weight: 600; }
+  .warn { color: var(--warn); } .bad { color: var(--bad); }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .85em; }
+  pre { background: var(--card); padding: 8px; border-radius: 6px; overflow: auto; max-height: 360px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>瀏覽器端 AI 量測頁</h1>
+  <p class="note">每一輪量測都會重新載入頁面，確保從乾淨狀態開始。量測期間請保持本分頁在前景，不要切換分頁或讓螢幕休眠。結果只存在本分頁，不會傳送到任何地方。</p>
+
+  <section id="setup">
+    <fieldset>
+      <legend>環境標記（請用中性代號，不要填人名或裝置自訂名稱）</legend>
+      <label>裝置代號 <input type="text" id="device" placeholder="例如 macmini" maxlength="32"></label>
+      <label>瀏覽器代號 <input type="text" id="browser" placeholder="例如 chrome156" maxlength="32"></label>
+      <label>網路備註 <input type="text" id="network" placeholder="例如 office-wifi" maxlength="48"></label>
+    </fieldset>
+    <fieldset>
+      <legend>受測方案</legend>
+      <span id="approachList"></span>
+    </fieldset>
+    <fieldset>
+      <legend>執行設定</legend>
+      <label>執行緒
+        <select id="modes">
+          <option value="worker">Worker（預設）</option>
+          <option value="main">主執行緒</option>
+          <option value="both">兩者都測</option>
+        </select>
+      </label>
+      <label>冷啟動輪數 <input type="number" id="cold" value="5" min="0" max="20"></label>
+      <label>暖啟動輪數 <input type="number" id="warm" value="5" min="0" max="20"></label>
+      <label>每輪推論次數 <input type="number" id="calls" value="10" min="2" max="50"></label>
+      <br>
+      <label><input type="checkbox" id="heartbeat"> 量測主執行緒阻塞（M9，只在 Mac mini 的 Chrome 使用）</label>
+      <br>
+      <label><input type="checkbox" id="httpcache"> 我已清除 HTTP 快取（新設定檔，或瀏覽器的清除網站資料）</label>
+      <br>
+      <label>進階選項（JSON，傳給受測方案；例如量化版本、執行緒數）
+        <input type="text" id="options" value="{}" style="width: 28em" spellcheck="false">
+      </label>
+    </fieldset>
+  </section>
+
+  <div class="actions">
+    <button id="start">開始量測</button>
+    <button id="stop" disabled>中止</button>
+    <button id="reset" disabled>清除本頁狀態</button>
+    <button id="download" disabled>下載結果（JSON）</button>
+    <button id="copy" disabled>複製結果（JSON）</button>
+  </div>
+  <div id="msg"></div>
+  <div id="progress"></div>
+
+  <h2>彙整（中位數，括號為範圍；n 為有效樣本數）</h2>
+  <div class="scroll"><table id="summary"></table></div>
+
+  <h2>原始結果</h2>
+  <details><summary>展開 JSON</summary><pre id="raw"></pre></details>
+</main>
+<script type="module" src="./app.js"></script>
+</body>
+</html>
