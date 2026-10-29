@@ -1,0 +1,264 @@
+{
+  "schemaVersion": 1,
+  "task": "sentiment-classification",
+  "language": "en",
+  "labels": [
+    "POSITIVE",
+    "NEGATIVE"
+  ],
+  "note": "自行撰寫的範例句子，不轉載任何資料集內容。標註為撰寫者的原意，非模型輸出。",
+  "items": [
+    {
+      "id": "s01",
+      "label": "POSITIVE",
+      "length": "short",
+      "words": 6,
+      "text": "The staff were friendly and helpful."
+    },
+    {
+      "id": "s02",
+      "label": "NEGATIVE",
+      "length": "short",
+      "words": 6,
+      "text": "The service was slow and rude."
+    },
+    {
+      "id": "s03",
+      "label": "POSITIVE",
+      "length": "short",
+      "words": 7,
+      "text": "I loved every minute of this film."
+    },
+    {
+      "id": "s04",
+      "label": "NEGATIVE",
+      "length": "short",
+      "words": 5,
+      "text": "I regret buying this product."
+    },
+    {
+      "id": "s05",
+      "label": "POSITIVE",
+      "length": "short",
+      "words": 7,
+      "text": "A warm, funny, and beautifully acted story."
+    },
+    {
+      "id": "s06",
+      "label": "NEGATIVE",
+      "length": "short",
+      "words": 6,
+      "text": "A dull, predictable, and lifeless story."
+    },
+    {
+      "id": "s07",
+      "label": "POSITIVE",
+      "length": "short",
+      "words": 7,
+      "text": "The battery lasts all day. Great phone."
+    },
+    {
+      "id": "s08",
+      "label": "NEGATIVE",
+      "length": "short",
+      "words": 6,
+      "text": "The screen cracked after one week."
+    },
+    {
+      "id": "s09",
+      "label": "POSITIVE",
+      "length": "short",
+      "words": 5,
+      "text": "Delicious food and quick service."
+    },
+    {
+      "id": "s10",
+      "label": "NEGATIVE",
+      "length": "short",
+      "words": 6,
+      "text": "Cold food and a long wait."
+    },
+    {
+      "id": "s11",
+      "label": "POSITIVE",
+      "length": "short",
+      "words": 5,
+      "text": "The ending was genuinely moving."
+    },
+    {
+      "id": "s12",
+      "label": "NEGATIVE",
+      "length": "short",
+      "words": 6,
+      "text": "The ending was a total letdown."
+    },
+    {
+      "id": "s13",
+      "label": "POSITIVE",
+      "length": "medium",
+      "words": 21,
+      "text": "The hotel room was spotless, the bed was comfortable, and the view of the harbor made the whole trip feel special."
+    },
+    {
+      "id": "s14",
+      "label": "NEGATIVE",
+      "length": "medium",
+      "words": 21,
+      "text": "The room smelled of smoke, the sheets were stained, and nobody at the front desk seemed to care about our complaints."
+    },
+    {
+      "id": "s15",
+      "label": "POSITIVE",
+      "length": "medium",
+      "words": 18,
+      "text": "I was skeptical at first, but the instructions were clear and the setup took less than five minutes."
+    },
+    {
+      "id": "s16",
+      "label": "NEGATIVE",
+      "length": "medium",
+      "words": 18,
+      "text": "I followed the instructions twice, but the device never connected, and the manual offered no useful troubleshooting steps."
+    },
+    {
+      "id": "s17",
+      "label": "POSITIVE",
+      "length": "medium",
+      "words": 22,
+      "text": "The author writes with humor and care, and I finished the book in two evenings because I could not put it down."
+    },
+    {
+      "id": "s18",
+      "label": "NEGATIVE",
+      "length": "medium",
+      "words": 22,
+      "text": "The plot makes no sense, the characters are shallow, and I kept checking my watch while waiting for the film to end."
+    },
+    {
+      "id": "s19",
+      "label": "POSITIVE",
+      "length": "medium",
+      "words": 21,
+      "text": "Customer support answered within minutes, fixed my billing problem, and even followed up the next day to make sure everything worked."
+    },
+    {
+      "id": "s20",
+      "label": "NEGATIVE",
+      "length": "medium",
+      "words": 21,
+      "text": "Customer support kept me on hold for an hour, transferred me three times, and never solved the problem I called about."
+    },
+    {
+      "id": "s21",
+      "label": "POSITIVE",
+      "length": "medium",
+      "words": 18,
+      "text": "Our guide knew the history of every street and kept the group entertained during the entire walking tour."
+    },
+    {
+      "id": "s22",
+      "label": "NEGATIVE",
+      "length": "medium",
+      "words": 21,
+      "text": "Our guide mumbled through the entire tour, skipped the main attractions, and seemed more interested in his phone than in us."
+    },
+    {
+      "id": "s23",
+      "label": "POSITIVE",
+      "length": "medium",
+      "words": 18,
+      "text": "After a month of daily use, the headphones still sound crisp and remain comfortable even during long flights."
+    },
+    {
+      "id": "s24",
+      "label": "NEGATIVE",
+      "length": "medium",
+      "words": 20,
+      "text": "After only a month of use, the zipper broke, the strap frayed, and the company refused to honor the warranty."
+    },
+    {
+      "id": "s25",
+      "label": "POSITIVE",
+      "length": "long",
+      "words": 43,
+      "text": "I booked this trip with low expectations, but everything exceeded them: the flights were on time, the apartment was spotless and well located, and the host left a handwritten list of local restaurants that turned out to be the highlight of the week."
+    },
+    {
+      "id": "s26",
+      "label": "NEGATIVE",
+      "length": "long",
+      "words": 41,
+      "text": "I booked this trip with high hopes, but nearly everything went wrong: the flight was delayed for six hours, the apartment was dirty and far from the center, and the host never answered our messages even when the heating stopped working."
+    },
+    {
+      "id": "s27",
+      "label": "POSITIVE",
+      "length": "long",
+      "words": 37,
+      "text": "The documentary follows three families over ten years, and it manages to be both intimate and honest without ever feeling manipulative; the final scene had the entire audience silent for a long moment before the applause began."
+    },
+    {
+      "id": "s28",
+      "label": "NEGATIVE",
+      "length": "long",
+      "words": 38,
+      "text": "The documentary drags on for nearly three hours, repeats the same points again and again, and relies on dramatic music to hide the lack of real insight; several people walked out before the end, and I understand why."
+    },
+    {
+      "id": "s29",
+      "label": "POSITIVE",
+      "length": "long",
+      "words": 39,
+      "text": "What impressed me most about the new laptop is how quiet and cool it stays under heavy load, while the keyboard feels excellent, the display is bright and accurate, and the battery comfortably lasts through a full working day."
+    },
+    {
+      "id": "s30",
+      "label": "NEGATIVE",
+      "length": "long",
+      "words": 39,
+      "text": "What disappointed me most about the new laptop is how loud and hot it gets under light use, while the keyboard feels mushy, the display is dim and washed out, and the battery barely survives half a working day."
+    },
+    {
+      "id": "s31",
+      "label": "POSITIVE",
+      "length": "long",
+      "words": 37,
+      "text": "The teacher explained difficult ideas with patience and simple examples, answered every question without making anyone feel foolish, and by the end of the semester even the students who had dreaded the subject were asking for more."
+    },
+    {
+      "id": "s32",
+      "label": "NEGATIVE",
+      "length": "long",
+      "words": 36,
+      "text": "The teacher rushed through difficult ideas without examples, brushed off questions with obvious impatience, and by the end of the semester even the students who had liked the subject admitted they had learned almost nothing useful."
+    },
+    {
+      "id": "s33",
+      "label": "POSITIVE",
+      "length": "long",
+      "words": 37,
+      "text": "We were nervous about hiring a contractor, yet the team arrived on schedule, protected our furniture, communicated every change in advance, and finished the kitchen two days early with work that looks far better than we imagined."
+    },
+    {
+      "id": "s34",
+      "label": "NEGATIVE",
+      "length": "long",
+      "words": 35,
+      "text": "We trusted a contractor with our kitchen, yet the team arrived late, left dust and damage everywhere, ignored our instructions, and finished three weeks behind schedule with work that already looks crooked and poorly sealed."
+    },
+    {
+      "id": "s35",
+      "label": "POSITIVE",
+      "length": "long",
+      "words": 37,
+      "text": "This small bakery deserves every bit of its loyal following: the pastries are flaky and not too sweet, the coffee is smooth, and the owner greets regulars by name, which makes each visit feel like coming home."
+    },
+    {
+      "id": "s36",
+      "label": "NEGATIVE",
+      "length": "long",
+      "words": 37,
+      "text": "This small bakery has fallen far below its reputation: the pastries are dry and overpriced, the coffee tastes burnt, and the owner barely looked up when we ordered, which made the whole visit feel cold and unwelcoming."
+    }
+  ]
+}

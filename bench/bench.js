@@ -175,6 +175,20 @@ export async function storageEstimate() {
   } catch { return null; }
 }
 
+// ---------- 測試資料 ----------
+// 載入公開組的情緒分類句子（site/data/sentiment-en.json）。
+// 回傳 { items, inputs }：items 保留標註與長度組別，inputs 為純文字陣列，供 runRound 循環使用。
+// 推論輸出與 label 的比對由各方案自行處理（輸出格式不同），框架只保存輸出摘要。
+export async function loadSentences(url = new URL('../data/sentiment-en.json', import.meta.url)) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`測試資料載入失敗：${res.status}`);
+  const data = await res.json();
+  if (data.schemaVersion !== 1 || !Array.isArray(data.items) || !data.items.length) {
+    throw new Error('測試資料格式不符');
+  }
+  return { items: data.items, inputs: data.items.map((it) => it.text) };
+}
+
 // ---------- 分頁可見性 ----------
 // 背景分頁的計時器會被瀏覽器降頻，量測期間分頁若曾進入背景，該輪標記為無效
 export function trackVisibility() {
