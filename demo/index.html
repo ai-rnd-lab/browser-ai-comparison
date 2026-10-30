@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>瀏覽器端 AI 展示</title>
+<script src="../coi.js"></script>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1f2328; --muted: #59636e; --line: #d1d9e0;
+    --ok: #1a7f37; --warn: #9a6700; --bad: #cf222e; --card: #f6f8fa;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117; --fg: #e6edf3; --muted: #9198a1; --line: #3d444d;
+      --ok: #3fb950; --warn: #d29922; --bad: #f85149; --card: #151b23;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 16px; background: var(--bg); color: var(--fg);
+    font: 15px/1.6 -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", sans-serif;
+  }
+  main { max-width: 880px; margin: 0 auto; }
+  h1 { font-size: 1.4rem; margin: 0 0 4px; }
+  h2 { font-size: 1.1rem; margin: 28px 0 6px; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
+  p.note { color: var(--muted); margin: 0 0 12px; }
+  .env { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; }
+  .env div { display: flex; gap: 8px; flex-wrap: wrap; }
+  .env b { min-width: 9em; font-weight: 600; }
+  textarea, input[type=text], select {
+    font: inherit; width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px;
+    background: var(--bg); color: var(--fg);
+  }
+  textarea { min-height: 9em; resize: vertical; }
+  .row { display: flex; gap: 8px; margin: 8px 0; flex-wrap: wrap; align-items: center; }
+  .row > input[type=text] { flex: 1 1 260px; width: auto; }
+  button {
+    font: inherit; padding: 6px 14px; border-radius: 6px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--card); color: var(--fg);
+  }
+  button:disabled { opacity: .5; cursor: default; }
+  .out { background: var(--card); border-radius: 6px; padding: 8px 12px; min-height: 2.4em; white-space: pre-wrap; }
+  .ok { color: var(--ok); } .warn { color: var(--warn); } .bad { color: var(--bad); }
+  .muted { color: var(--muted); }
+  label.inline { display: inline-flex; gap: 6px; align-items: center; }
+</style>
+</head>
+<body>
+<main>
+  <h1>瀏覽器端 AI 展示</h1>
+  <p class="note">模型在這個瀏覽器分頁內執行。輸入的文字與文件不會送到任何伺服器；需要從網路取得的只有模型檔與函式庫（第一次使用時下載，之後從瀏覽器快取讀取）。</p>
+
+  <div class="env" id="env"><div><b>偵測中</b><span>…</span></div></div>
+
+  <h2>一、情緒分類（DistilBERT，約 134 MB）</h2>
+  <p class="note">判斷一句英文是正面或負面。有 WebGPU 時使用顯示卡運算；沒有時自動改用 WebAssembly（Wasm，以處理器運算）。網址加上 <code>?force=wasm</code> 可強制示範改用 Wasm 的情況。</p>
+  <div class="row">
+    <input type="text" id="sentText" value="The new dashboard is fast and easy to use.">
+    <button id="sentBtn">分類</button>
+  </div>
+  <div class="out" id="sentOut"><span class="muted">第一次分類會先下載模型。</span></div>
+
+  <h2>二、依文件回答問題</h2>
+  <p class="note">模型只根據下方文件回答；文件沒有答案時應回答「NOT IN DOCUMENT」或「文件未提及」。下方預設為虛構的公司規定，可以改成任何文字。</p>
+  <div class="row">
+    <label class="inline">使用的模型
+      <select id="qaEngine" style="width:auto"></select>
+    </label>
+  </div>
+  <textarea id="qaDoc"></textarea>
+  <div class="row">
+    <input type="text" id="qaQuestion" value="When do core hours start?">
+    <button id="qaBtn">提問</button>
+  </div>
+  <div class="out" id="qaOut"><span class="muted">尚未提問。</span></div>
+  <p class="note" id="qaNote"></p>
+</main>
+<script type="module" src="demo.js"></script>
+</body>
+</html>
