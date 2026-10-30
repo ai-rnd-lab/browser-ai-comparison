@@ -2,7 +2,7 @@
 // 計時一律使用 performance.now()；各指標的起訖點見 README「指標操作型定義」。
 // 本檔也會被 Web Worker 匯入，因此頂層不可存取 document 或 window。
 
-export const BENCH_VERSION = '0.3.0';
+export const BENCH_VERSION = '0.3.1';
 export const SCHEMA_VERSION = 1;
 export const HEARTBEAT_INTERVAL_MS = 16;
 
@@ -127,9 +127,11 @@ export function resourceBytes(sinceEpochMs) {
 //   快取為空且讀到足量位元組，回報 ok-library；否則回報 unavailable，不下結論。
 // 暖啟動：方案若回報 cacheEntriesBefore 為 0，代表快取是空的，回報 suspect-not-cached。
 export function prepCheck(phase, bytes, expectedModelBytes) {
+  // 快取筆數的檢查不需要預期大小，先做（0.3.1：修正未設預期大小時漏判暖啟動快取為空）
+  if (phase === 'warm' && bytes && bytes.cacheEntriesBefore === 0) return 'suspect-not-cached';
+  if (phase === 'cold' && bytes && bytes.cacheEntriesBefore > 0 && !expectedModelBytes) return 'suspect-cached';
   if (!expectedModelBytes) return 'no-expectation';
   if (phase === 'warm') {
-    if (bytes.cacheEntriesBefore === 0) return 'suspect-not-cached';
     return bytes.transferBytes >= expectedModelBytes * 0.2 ? 'suspect-downloaded' : 'ok';
   }
   if (bytes.transferBytes >= expectedModelBytes * 0.8) return 'ok';
