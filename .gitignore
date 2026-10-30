@@ -1,2 +1,5 @@
 data/sst2-validation.json
 data/bert_classifier.tflite
+
+# macOS
+.DS_Store
