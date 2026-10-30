@@ -1,6 +1,6 @@
 # 量測框架（bench）
 
-瀏覽器端 AI 方案比較用的量測頁與共用程式。版本 0.2.1；含「框架自我檢查」用的模擬方案與任務 A 的 Transformers.js 方案；ONNX Runtime Web、LiteRT.js、WebLLM、Chrome 內建 AI 於後續加入。
+瀏覽器端 AI 方案比較用的量測頁與共用程式。版本 0.3.0；含「框架自我檢查」用的模擬方案與任務 A 的 Transformers.js 方案；ONNX Runtime Web、LiteRT.js、WebLLM、Chrome 內建 AI 於後續加入。
 
 ## 使用方式
 
@@ -109,3 +109,26 @@ M7（記憶體峰值）與 M8（整合成本）不由本頁量測，M7 以活動
 | 量測中途強制重新整理 | 該輪記為未完成，排程繼續，不計入有效樣本 |
 
 這些數字只證明框架的計時與判斷邏輯，不是任何受測方案的效能數據。
+
+## 任務 B：依文件回答問題（0.3.0 新增）
+
+- 目的：檢驗模型能否只根據使用者提供的文件回答問題，並在文件沒有答案時回答「文件未提及」，而不是自行編造。對應的應用情境是敏感內容的 AI 對談：文件與對話都留在瀏覽器內。
+- 測試資料：`../data/docqa.json`。英文 3 篇、中文 1 篇，每篇約 300 英文字（中文約 480 字），每篇 4 題，最後一題的答案不在文件中。全部文件為自行撰寫的虛構內容（公司、產品、人名皆為虛構），模型無法從訓練資料得知答案。
+- 評分規則（量測前訂定）：一般題的回答包含任一可接受答案（數字前後不得緊鄰其他數字），且沒有回答「文件未提及」，即為答對；無答案題的回答包含 `NOT IN DOCUMENT`（中文為 `文件未提及`）即為答對。
+- 題目順序：依文件輪流（第 1 篇第 1 題、第 2 篇第 1 題……）。英文 12 題、中文 4 題，「每輪推論次數」請設為題數。
+- 每題都是獨立的新對話（系統提示加文件加問題），不累積前一題的內容。
+
+### 受測方案：WebLLM + Qwen3-0.6B（`webllm-docqa`）
+
+- WebLLM 0.2.86（jsdelivr 的 `lib/index.js`），模型 `Qwen3-0.6B-q4f16_1-MLC`（官方預編譯，WebAssembly 檔來自 GitHub 的 binary-mlc-llm-libs）。Worker 模式使用官方的 `WebWorkerMLCEngine`。
+- 生成設定：`temperature` 0、`max_tokens` 48、`extra_body.enable_thinking` false（關閉思考模式）。
+- 進階選項：`lang`（`en` 預設、`zh`）、`maxTokens`、`libraryUrl`。
+- 冷啟動：WebLLM 以 Cache API 的 `cache.add()` 存放檔案，冷啟動時改寫為略過 HTTP 快取的下載（見 `webllm-core.js`）。準備前的快取筆數記於 `bytes.cacheEntriesBefore`，冷啟動應為 0、暖啟動應大於 0。
+- M6 以串流片段計算，WebLLM 每段約為一個 token；實際 token 數另記於每題輸出的 `completionTokens`。
+
+### 受測方案：Chrome 內建 AI（`builtin-docqa`）
+
+- Prompt API（`LanguageModel`），只能在主執行緒，只測英文。網頁版無法設定取樣參數，使用瀏覽器預設值，因此同一題的回答可能每次不同。
+- 每題先以 `clone()` 建立新工作階段再提問（原因見研究日誌 F40），clone 時間計入該題延遲。
+- 模型由瀏覽器管理，清除網站資料無法重現下載，冷啟動輪數請設為 0；模型下載時間另見研究日誌 F39。
+- M6 的單位是「串流片段／秒」，片段不等於 token，不可與 WebLLM 的 M6 直接比較。

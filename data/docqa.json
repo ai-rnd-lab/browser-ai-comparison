@@ -1,0 +1,167 @@
+{
+ "schemaVersion": 1,
+ "note": "任務 B（依文件回答問題）測試資料。全部文件為本研究自行撰寫的虛構內容，公司、產品、人名皆為虛構；模型不可能從訓練資料得知答案，因此可檢驗是否真的依文件回答。每篇最後一題的答案不在文件中，用來檢查模型是否會編造答案。",
+ "notFound": {
+  "en": "NOT IN DOCUMENT",
+  "zh": "文件未提及"
+ },
+ "documents": [
+  {
+   "id": "en-policy",
+   "lang": "en",
+   "title": "Calder Pine Logistics: Remote Work and Leave Policy",
+   "text": "Calder Pine Logistics: Remote Work and Leave Policy (Version 3.2, effective 1 March 2026)\n\n1. Scope. This policy applies to all salaried employees of Calder Pine Logistics. Employees in warehouse operations and fleet maintenance are excluded from the remote work section because their duties require them to be on site.\n\n2. Remote work. Eligible employees may work remotely for up to three days per week. Remote days must be agreed with the employee's direct manager at least one week in advance and recorded in the team calendar. Regardless of location, all employees must be reachable during core hours, which run from 10:30 to 15:00 local time. Outside core hours, employees may arrange their working time flexibly as long as weekly hours are met.\n\n3. Home office support. Employees who work remotely at least one day per week receive a one-time home office stipend of 420 dollars, paid with the first salary after approval. In addition, an internet allowance of 35 dollars per month is paid for every month in which the employee works remotely at least four days.\n\n4. Annual leave. Employees receive 17 days of paid annual leave per year during their first two years of service. From the third year of service onward, the entitlement increases to 21 days per year. Leave is calculated pro rata for employees who join or leave during the year.\n\n5. Carry-over. Up to six unused leave days may be carried over into the following year. Carried-over days must be taken by 30 June of that year; any carried-over days not used by then expire without compensation.\n\n6. Requests. Leave of up to five consecutive working days is approved by the direct manager. Requests for more than five consecutive working days must be submitted at least three weeks in advance and require approval from the department head.\n\n7. Policy owner. This policy is maintained by the People Operations team. Questions should be sent to the policy desk through the internal help portal. The next scheduled review of this policy is in January 2027.",
+   "questions": [
+    {
+     "id": "en-policy-1",
+     "q": "How many days of paid annual leave do employees receive in their first two years of service?",
+     "accept": [
+      "17"
+     ]
+    },
+    {
+     "id": "en-policy-2",
+     "q": "When do core hours start?",
+     "accept": [
+      "10:30"
+     ]
+    },
+    {
+     "id": "en-policy-3",
+     "q": "How many unused leave days can be carried over into the following year?",
+     "accept": [
+      "6",
+      "six"
+     ]
+    },
+    {
+     "id": "en-policy-4",
+     "q": "How many weeks of parental leave do employees receive?",
+     "accept": [
+      "NOT IN DOCUMENT"
+     ],
+     "unanswerable": true
+    }
+   ],
+   "words": 340
+  },
+  {
+   "id": "en-product",
+   "lang": "en",
+   "title": "Heron-7 Field Sensor: Firmware 4.18 Release Notes",
+   "text": "Heron-7 Field Sensor: Firmware 4.18 Release Notes\n\nOverview. The Heron-7 is a battery-powered field sensor that measures soil moisture, air temperature and relative humidity, and reports readings over a LoRa radio link. Firmware 4.18 is a maintenance release for all Heron-7 units manufactured from 2025 onward.\n\nSpecifications. With the default reporting interval of 15 minutes, the rated battery life is 26 months. Shortening the interval to 5 minutes reduces the rated battery life to about 11 months. The sensor operates at temperatures from minus 25 to plus 60 degrees Celsius. The maximum payload per transmission is 48 bytes.\n\nNew in 4.18. Firmware 4.18 adds support for the AS923 LoRa frequency plan, which allows the sensor to be deployed in additional regions. It also fixes a clock drift bug in firmware 4.17 that caused timestamps to drift by up to 9 seconds per day. After upgrading, the sensor resynchronises its clock with the gateway once every 24 hours.\n\nUpgrading. Firmware is delivered over the air through the gateway. A complete upgrade takes about 11 minutes, during which the sensor does not send readings. Do not start an upgrade when the battery level is below 20 percent; the gateway will reject the upgrade request in that case. If an upgrade is interrupted, the sensor automatically returns to the previous firmware version.\n\nKnown issues. When relative humidity is above 95 percent, some units report a value of 100 percent. This issue is caused by a rounding error in the humidity calibration table and is scheduled to be fixed in firmware 4.19. Readings below 95 percent are not affected.\n\nSupport. Report problems to the Heron support team and include the sensor serial number, the firmware version and the gateway log for the affected period.",
+   "questions": [
+    {
+     "id": "en-product-1",
+     "q": "What is the rated battery life with the default 15-minute reporting interval?",
+     "accept": [
+      "26 months",
+      "26"
+     ]
+    },
+    {
+     "id": "en-product-2",
+     "q": "Below what battery level should an upgrade not be started?",
+     "accept": [
+      "20"
+     ]
+    },
+    {
+     "id": "en-product-3",
+     "q": "Which firmware version is scheduled to fix the humidity issue?",
+     "accept": [
+      "4.19"
+     ]
+    },
+    {
+     "id": "en-product-4",
+     "q": "What is the retail price of the Heron-7 sensor?",
+     "accept": [
+      "NOT IN DOCUMENT"
+     ],
+     "unanswerable": true
+    }
+   ],
+   "words": 290
+  },
+  {
+   "id": "en-incident",
+   "lang": "en",
+   "title": "Incident Review: Order Sync Outage",
+   "text": "Incident Review: Order Sync Outage on 14 August 2026\n\nSummary. On 14 August 2026, the order synchronisation service stopped forwarding new orders from the web shop to the fulfilment system. The outage started at 09:42 and was resolved at 11:17, a duration of 95 minutes. During the outage, 2,318 orders were delayed. No orders were lost, because the web shop kept all orders in its outbound queue and delivered them after the service recovered.\n\nDetection. The outage was not detected by monitoring. The first signal was a customer support ticket at 10:05 reporting that order confirmation emails had not arrived. The on-call engineer was paged at 10:12.\n\nRoot cause. The order synchronisation service connects to the internal message broker named relay-b over an encrypted connection. The TLS certificate of relay-b expired at 09:42. After expiry, every connection attempt from the synchronisation service was rejected, and the service did not raise an alert because connection failures were logged only at debug level.\n\nResolution. The on-call engineer identified the expired certificate at 10:58 and installed a renewed certificate at 11:09. The synchronisation service reconnected automatically, and the backlog of delayed orders was cleared by 11:17.\n\nAction items.\n1. Add alerts for certificates that expire within 30 days. Owner: Mira Okafor. Due: 29 August 2026.\n2. Log connection failures to the message broker at error level. Owner: Tomas Varga. Due: 22 August 2026.\n3. Update the on-call runbook with certificate renewal steps. Owner: Lin Hartley. Due: 5 September 2026.\n\nLessons learned. Certificates for internal services had been renewed manually and were not tracked in a central inventory. The team agreed to move all internal certificates to automated renewal by the end of the year.",
+   "questions": [
+    {
+     "id": "en-incident-1",
+     "q": "What expired and caused the outage?",
+     "accept": [
+      "certificate"
+     ]
+    },
+    {
+     "id": "en-incident-2",
+     "q": "How many orders were delayed?",
+     "accept": [
+      "2,318",
+      "2318"
+     ]
+    },
+    {
+     "id": "en-incident-3",
+     "q": "Who owns the action item to add certificate expiry alerts?",
+     "accept": [
+      "Okafor"
+     ]
+    },
+    {
+     "id": "en-incident-4",
+     "q": "How much revenue was lost because of the outage?",
+     "accept": [
+      "NOT IN DOCUMENT"
+     ],
+     "unanswerable": true
+    }
+   ],
+   "words": 281
+  },
+  {
+   "id": "zh-travel",
+   "lang": "zh",
+   "title": "青嵐設計工作室 出差與報帳規定",
+   "text": "青嵐設計工作室 出差與報帳規定（2026 年版，自 2026 年 1 月 1 日起實施）\n\n一、適用範圍：本規定適用於本工作室全體正式員工。約聘人員出差時比照辦理，但須事先取得專案負責人同意。\n\n二、交通：國內出差以搭乘大眾運輸為原則。高鐵可搭乘標準車廂；如需搭乘商務車廂，須事先經部門經理核准。自行開車者，依實際里程每公里補助 4.5 元，停車費與過路費憑單據另行報支。\n\n三、住宿：國內出差住宿費上限為每晚新臺幣 2,900 元；在臺北市住宿者，上限提高為每晚 3,400 元。超過上限的部分由員工自行負擔。\n\n四、膳雜費：國內出差每日膳雜費為新臺幣 680 元，以實際出差日數計算，不需檢附單據。當日往返且出差時間未滿 4 小時者，膳雜費減半。\n\n五、報帳期限：員工應於出差返回後 10 個工作天內，透過內部系統提出報帳申請，並上傳所有單據的電子檔。逾期提出者，須由部門經理說明原因後方可受理。\n\n六、採購與報價：出差期間單筆支出超過新臺幣 15,000 元者，須附兩家以上的報價單。\n\n七、本規定由行政管理組負責維護，相關問題請透過內部服務平台提出。",
+   "questions": [
+    {
+     "id": "zh-travel-1",
+     "q": "國內出差每日膳雜費是多少元？",
+     "accept": [
+      "680"
+     ]
+    },
+    {
+     "id": "zh-travel-2",
+     "q": "出差返回後幾個工作天內要提出報帳？",
+     "accept": [
+      "10",
+      "十個"
+     ]
+    },
+    {
+     "id": "zh-travel-3",
+     "q": "在臺北市住宿，每晚上限是多少元？",
+     "accept": [
+      "3,400",
+      "3400"
+     ]
+    },
+    {
+     "id": "zh-travel-4",
+     "q": "國外出差搭飛機可以坐哪一種艙等？",
+     "accept": [
+      "文件未提及"
+     ],
+     "unanswerable": true
+    }
+   ],
+   "words": 479
+  }
+ ]
+}
