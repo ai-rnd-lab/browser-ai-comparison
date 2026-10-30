@@ -11,6 +11,10 @@ const fmt = (ms) => (ms >= 1000 ? `${(ms / 1000).toFixed(1)} 秒` : `${Math.roun
 const isZh = (s) => /[㐀-鿿]/.test(s);
 
 const env = { webgpu: false, webgpuReason: '', builtin: 'unavailable', coi: window.crossOriginIsolated === true };
+// 情緒分類能否執行，要實際建立模型並分類一次才知道（Safari 17.3 偵測正確、改走 Wasm，卻在建立模型時失敗）。
+// untested：尚未試跑；ok：已成功分類；failed：試跑失敗。
+const sentState = { status: 'untested', error: '' };
+const escapeHtml = (t) => String(t).replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
 
 async function detect() {
   if (force === 'wasm') env.webgpuReason = '網址指定 force=wasm（示範用）';
@@ -29,42 +33,79 @@ async function detect() {
       });
     } catch { env.builtin = 'unavailable'; }
   }
+  renderEnv();
+}
+
+function renderEnv() {
   const builtinText = { available: '可用（模型已在此瀏覽器）', downloadable: '需先下載模型（約數 GB，本頁不觸發下載）', downloading: '下載中', unavailable: '不可用' }[env.builtin] || env.builtin;
+  const method = env.webgpu ? 'WebGPU（顯示卡）' : 'Wasm（處理器）' + (env.coi ? '，多執行緒' : '，單執行緒');
+  const sentText = {
+    untested: env.webgpu
+      ? ['muted', '尚未執行']
+      : ['warn', '尚未確認。沒有 WebGPU 時能否執行，要按「分類」實際試跑後才知道'],
+    ok: ['ok', '已確認可以執行'],
+    failed: ['bad', '無法執行（見下方情緒分類的錯誤說明）'],
+  }[sentState.status];
   $('env').innerHTML = `
-    <div><b>WebGPU</b><span class="${env.webgpu ? 'ok' : 'warn'}">${env.webgpu ? '可用' : '不可用：' + env.webgpuReason}</span></div>
-    <div><b>情緒分類的執行方式</b><span>${env.webgpu ? 'WebGPU（顯示卡）' : 'Wasm（處理器）' + (env.coi ? '，多執行緒' : '，單執行緒')}</span></div>
+    <div><b>WebGPU</b><span class="${env.webgpu ? 'ok' : 'warn'}">${env.webgpu ? '可用' : '不可用：' + escapeHtml(env.webgpuReason)}</span></div>
+    <div><b>情緒分類的執行方式</b><span>${method}</span></div>
+    <div><b>情緒分類能否執行</b><span class="${sentText[0]}">${sentText[1]}</span></div>
     <div><b>Chrome 內建 AI</b><span class="${env.builtin === 'available' ? 'ok' : 'muted'}">${builtinText}</span></div>`;
+}
+
+function setSentState(status, error = '') {
+  sentState.status = status; sentState.error = error;
+  renderEnv();
+  if (qaDisabled) renderQaDisabledNote();
 }
 
 // ---------- 一、情緒分類 ----------
 let sent = null;
-async function ensureSentiment() {
+const STAGE_TEXT = { load: '載入函式庫', prepare: '建立模型', classify: '執行分類' };
+async function ensureSentiment(stage) {
   if (sent) return sent;
   const proxy = createWorkerProxy(new URL('../bench/approaches/transformers-worker.js', import.meta.url));
-  await proxy.call('load', {});
-  const device = env.webgpu ? 'webgpu' : 'wasm';
-  const t0 = performance.now();
-  const info = await proxy.call('prepare', { dtype: 'fp16', device });
-  sent = { proxy, device, prepareMs: performance.now() - t0, info };
-  return sent;
+  try {
+    stage.name = 'load';
+    await proxy.call('load', {});
+    const device = env.webgpu ? 'webgpu' : 'wasm';
+    stage.name = 'prepare';
+    const t0 = performance.now();
+    const info = await proxy.call('prepare', { dtype: 'fp16', device });
+    sent = { proxy, device, prepareMs: performance.now() - t0, info };
+    return sent;
+  } catch (e) {
+    proxy.terminate(); // 失敗時關閉 Worker，再按一次會重新試跑
+    throw e;
+  }
 }
 
 $('sentBtn').onclick = async () => {
   const text = $('sentText').value.trim();
   if (!text) return;
   $('sentBtn').disabled = true;
+  const stage = { name: 'load' };
   try {
     const first = !sent;
     $('sentOut').textContent = first ? '準備模型中（第一次需下載）…' : '分類中…';
-    const s = await ensureSentiment();
+    const s = await ensureSentiment(stage);
+    stage.name = 'classify';
     const t0 = performance.now();
     const out = await s.proxy.call('classify', text);
     const ms = performance.now() - t0;
     const label = out.label === 'POSITIVE' ? '正面' : '負面';
     $('sentOut').innerHTML = `<b>${label}</b>（信心 ${(out.score * 100).toFixed(1)}%）　分類耗時 ${fmt(ms)}　執行方式：${s.device === 'webgpu' ? 'WebGPU' : 'Wasm'}` +
       (first ? `\n<span class="muted">本次先準備模型 ${fmt(s.prepareMs)}</span>` : '');
+    if (sentState.status !== 'ok') setSentState('ok');
   } catch (e) {
-    $('sentOut').innerHTML = `<span class="bad">失敗：${(e && e.message) || e}</span>`;
+    const raw = (e && e.message) || String(e);
+    const where = STAGE_TEXT[stage.name] || stage.name;
+    const method = env.webgpu ? 'WebGPU' : 'Wasm';
+    $('sentOut').innerHTML =
+      `<span class="bad">這個瀏覽器無法完成情緒分類：以 ${method} ${where}時發生錯誤。</span>` +
+      `\n<span class="muted">可改用新版 Chrome，或 Safari 26 以上的版本。再按一次「分類」會重新試跑。</span>` +
+      `\n<details><summary class="muted">錯誤原文</summary>${escapeHtml(raw)}</details>`;
+    setSentState('failed', raw);
   } finally {
     $('sentBtn').disabled = false;
   }
@@ -80,6 +121,16 @@ async function loadSampleDoc() {
   } catch { $('qaDoc').value = ''; }
 }
 
+let qaDisabled = false;
+function renderQaDisabledNote() {
+  const sentLine = {
+    untested: env.webgpu ? '' : '上方情緒分類會改用 Wasm 執行，能否執行要按「分類」實際試跑後才知道。',
+    ok: '上方情緒分類已確認可以執行。',
+    failed: '上方情緒分類在這個瀏覽器也無法執行。',
+  }[sentState.status];
+  $('qaNote').textContent = '依文件回答問題需要 Chrome 內建 AI，或支援 WebGPU 的瀏覽器（WebLLM）。此環境兩者皆不可用，因此本功能停用。' + sentLine;
+}
+
 function fillEngines() {
   const sel = $('qaEngine');
   const opts = [];
@@ -88,7 +139,8 @@ function fillEngines() {
   if (!opts.length) {
     sel.innerHTML = '<option value="">此環境沒有可用的模型</option>';
     sel.disabled = true; $('qaBtn').disabled = true;
-    $('qaNote').textContent = '依文件回答問題需要 Chrome 內建 AI，或支援 WebGPU 的瀏覽器（WebLLM）。此環境兩者皆不可用，因此本功能停用；情緒分類仍可使用。';
+    qaDisabled = true;
+    renderQaDisabledNote();
     return;
   }
   sel.innerHTML = opts.map(([v, t]) => `<option value="${v}">${t}</option>`).join('');
